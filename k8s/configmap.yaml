@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: webapp-config
+  namespace: webapp
+data:
+  APP_MESSAGE: "Bonjour depuis Kubernetes (k3s)"
+  # Lien Lab 6 : lecture sur le réplica PostgreSQL pg-02 (rôle dédié, lecture seule)
+  DB_HOST: "192.168.184.61"
+  DB_PORT: "5432"
+  DB_NAME: "labdb"
+  DB_USER: "webapp_k8s"

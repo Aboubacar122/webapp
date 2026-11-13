@@ -18,3 +18,7 @@ curl localhost:8080/health
 Configuration par variables d'environnement : `APP_MESSAGE`, `DB_HOST`, `DB_NAME`, `DB_USER`. Les secrets se passent par fichier monté en lecture seule : `API_KEY_FILE`, `DB_PASSWORD_FILE` (jamais dans l'image).
 
 Résultats mesurés : image 264 Mo contre 1,81 Go pour une image naïve (−85 %) ; 0 vulnérabilité HIGH/CRITICAL (Trivy 0.76.2) contre 434.
+
+## Lab 8 – Kubernetes (k3s)
+
+Manifestes et résultats dans [`k8s/`](k8s/README.md) : 3 nœuds, 0 requête en échec pendant les mises à jour grâce à `preStop`, lien base (Lab 6) et supervision (Lab 5).

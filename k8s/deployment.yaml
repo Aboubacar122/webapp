@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  namespace: webapp
+  labels:
+    app: webapp
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: webapp
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0   # jamais moins de 3 pods prêts pendant une mise à jour
+      maxSurge: 1         # un pod de plus au maximum
+  template:
+    metadata:
+      labels:
+        app: webapp
+    spec:
+      automountServiceAccountToken: false     # l'appli n'appelle pas l'API Kubernetes
+      terminationGracePeriodSeconds: 30       # 10 s de preStop + arret propre de Node
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000                       # utilisateur "node" de l'image (Lab 7)
+        runAsGroup: 1000
+        fsGroup: 1000                         # rend le Secret monté lisible par le groupe 1000
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:              # répartir les copies sur les nœuds
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: webapp
+      containers:
+        - name: webapp
+          image: ghcr.io/aboubacar122/webapp:1.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: webapp-config
+          env:
+            - name: API_KEY_FILE              # la valeur n'est jamais dans une variable d'environnement
+              value: /run/secrets/webapp/API_KEY
+            - name: DB_PASSWORD_FILE
+              value: /run/secrets/webapp/DB_PASSWORD
+          volumeMounts:
+            - name: webapp-secrets
+              mountPath: /run/secrets/webapp
+              readOnly: true
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 10   # laisse traefik retirer le pod AVANT le SIGTERM
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "128Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: webapp-secrets                # deux Secrets réunis dans un seul dossier en lecture seule
+          projected:
+            defaultMode: 0440
+            sources:
+              - secret:
+                  name: webapp-secret         # API_KEY
+              - secret:
+                  name: webapp-db             # DB_PASSWORD
