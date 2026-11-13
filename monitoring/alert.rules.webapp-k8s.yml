@@ -1,0 +1,9 @@
+  - name: webapp-k8s
+    rules:
+      - alert: WebappK8sReplicasLow
+        expr: (count(up{job="webapp-k8s"} == 1) or vector(0)) < 2
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "Moins de 2 pods webapp joignables dans le cluster k3s"
+          description: "Prometheus ne lit /metrics que sur {{ $value }} pod(s) depuis 2 minutes (3 attendus, PDB minimum 2)."
